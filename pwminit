@@ -1,111 +1,82 @@
+#/*
+ * pwm.c
+ *
+ * Created: 2015-07-05 5:39:37 PM
+ *  Author: David
+ */ 
+
 #include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/io.h>
+#define F_CPU 14745600UL
+#include <util/delay.h>
 
 void _pwm_init(void);
-void _pwm_fwd(void);
-void _pwm_fwd_left(void);
-void _pwm_fwd_right(void);
-void _pwm_fwd(void);
-void _pwm_rvs_left(void);
-void _pwm_rvs_right(void);
-void _pwm_rvs(void);
-void _pwm_left(void);
-void _pwm_right(void);
+void _pwm_fwd(int speed);
+void _pwm_brake(void);
+void _pwm_rvs(int speed);
+void _pwm_left(int speed);
+void _pwm_right(int speed);
+
+#define _FAST 200
+#define _NORMAL 128
+#define _SLOW 64
 
 int main(void)
 {
 	_pwm_init();
-	_pwm_fwd();
+	_delay_ms(1000);
+	_pwm_fwd(180);
 	while(1);
 }
 
 void _pwm_init(void)
 {
-    DDRB |=_BV(PB3)|_BV(PB4);
-    OCR0A = 64;									//set duty cycle
-	OCR0B = 64;
-    OCR0A = 128;															//set duty cycle
+	PORTB = 0xFF;															//initialized PORTB all zeros
+	DDRB |=_BV(PB3)|_BV(PB4);
+	DDRB |=_BV(PB1)|_BV(PB2);												//set output pins 
+	OCR0A = 128;															//set duty cycle
 	OCR0B = 128;
-    TCCR0A |= _BV(COM0A1)|_BV(COM0A0)| _BV(WGM00) |_BV(COM0B1)|_BV(COM0B0);	//phase correct pwm; inverting
-    inverting
-    TCCR0B = 1<<CS00;								//gives pre-scaler of 256
-    TCCR0B = 1<<CS01;														//gives pre-scaler of 8
-    while(1);
-	PORTB = _BV(PB3)|_BV(PB4);
-	PORTB = _BV(PB3)|_BV(PB4);												// 
+	TCCR0A |= _BV(COM0A1)|_BV(COM0A0)| _BV(WGM00) |_BV(COM0B1)|_BV(COM0B0);	//phase correct pwm; inverting
+    	TCCR0B = 1<<CS01;														//pre-scaler of 8												// 
 }
 
-void _pwm_fwd_left(void)
+void _pwm_fwd(int speed)
 {
-	PORTB &= ~( _BV(PB2));
+	OCR0A = speed;															//set duty cycle
+	OCR0B = speed;
+	PORTB |=(_BV(PB2));
+	PORTB |=(_BV(PB1));
 }
 
-void _pwm_fwd_right(void)
+void _pwm_rvs(int speed)
 {
-	PORTB &= ~(_BV(PB1));
+	OCR0A = speed;															//set duty cycle
+	OCR0B = speed;
+	PORTB &= ~(1<<PB2);
+	PORTB &= ~(1<<PB1);
 }
 
-void _pwm_fwd(void)
+void _pwm_brake(void)
 {
-	PORTB &= ~(_BV(PB1) | _BV(PB2));
+	OCR0A = 0;															//set duty cycle
+	OCR0B = 0;
+	PORTB |=(1<<PB2);
+	PORTB |=(1<<PB1);
 }
 
-void _pwm_rvs_left(void)
+void _pwm_left(int speed)
 {
-	PORTB |= (_BV(PB2));
+	OCR0A = 0;
+	OCR0B = speed;
+	PORTB |= (1<<PB2);
+	PORTB |= (1<<PB1);
 }
 
-void _pwm_fwd_right(void)
+void _pwm_right(int speed)
 {
-	PORTB &= ~(_BV(PB1));
+	OCR0B = 0;
+	OCR0A  = speed;
+	PORTB |= (1<<PB2);
+	PORTB |= (1<<PB1);
 }
-
-void _pwm_fwd(void)
-{
-	PORTB &= ~(_BV(PB1) | _BV(PB2));
-}
-
-void _pwm_rvs_left(void)
-{
-	PORTB |= (_BV(PB2));
-}
-
-void _pwm_rvs_right(void)
-{
-	PORTB |= (_BV(PB1));
-}
-
-void _pwm_rvs(void)
-{
-	PORTB |= (_BV(PB1) | (_BV(PB2)));
-}
-
-void _pwm_left(void)
-{
-	_pwm_rvs_left();
-	_pwm_fwd_right();
-}
-
-void _pwm_right(void)
-{
-	_pwm_rvs_right();
-	_pwm_fwd_left();
-}
-
-
-/*
-Truth Table Left Motor:
-Black	White
-In 1	In 2	Motor
-High	High	OFF
-High	PWM		OFF
-PWM		High	FWD
-PWM		PWM		RVS		(switch outputs)
-
-Truth Table Right Motor:
-Purple	Blue
-In1		In2		Motor
-High	High	OFF
-High	PWM		OFF
-PWM		High	RVS
-PWM		PWM		FWD
-*/
